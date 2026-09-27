@@ -43,14 +43,38 @@ share state through Supabase.
 
 ## Data model (see `supabase/migrations/0001_init.sql`)
 
+Authentication and authorization are deliberately separate:
+- **Authentication** (who you are) is entirely Supabase Auth's job —
+  `users` just mirrors `auth.users` with profile fields.
+- **Authorization** (what you can do, in which family group) lives in
+  `circle_members` — a per-circle role plus fine-grained permission flags,
+  so the same person could have different permissions in two different
+  care circles.
+
+Tables:
 - `users` — account holders, linked to Supabase Auth
-- `care_circles` — one per person being cared for
-- `circle_members` — join table: user ↔ circle, with a role
-  (`parent`, `child`, `sibling`) and permission level
+- `care_circles` — one shared family group per patient
+- `circle_members` — role (`patient` | `caregiver`) + permission flags:
+  `can_manage_medications`, `can_view_health_data`, `can_manage_members`,
+  `can_trigger_sos`, `receives_sos_alerts`. A database check constraint
+  guarantees a `caregiver` row can never have `can_trigger_sos = true` —
+  only the patient can trigger SOS, though any caregiver can still
+  receive SOS alerts and can still manage circle membership (invite/remove
+  people) by default.
+- `circle_invitations` — short codes an admin/patient generates so a
+  family member can join with a pre-set role. Redeeming a code happens
+  through a trusted server-side function (service role), since the
+  invitee has no `circle_members` row yet to satisfy RLS on their own.
 - `prescriptions` — drug, dosage, frequency, quantity remaining, refill threshold
 - `dose_logs` — who logged a dose, when, taken/missed
 - `appointments` — doctor visits, dates, notes
-- `care_notes` — free-form updates between family members
+- `care_notes` — free-form updates between family members (open to all
+  circle members, not gated by health-data permissions)
+
+Row Level Security is enabled and policy-backed on every table: reads are
+scoped by `can_view_health_data`, writes to medical data require
+`can_manage_medications`, and membership/invite management requires
+`can_manage_members`.
 
 ## Notification flow
 
