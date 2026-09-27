@@ -1,0 +1,13 @@
+# Supabase project config
+# Run `npx supabase init` locally if you want the full generated config;
+# this is a minimal placeholder for the hackathon build.
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+
+[auth]
+enabled = true

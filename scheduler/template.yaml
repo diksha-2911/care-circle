@@ -1,0 +1,30 @@
+# AWS SAM template: EventBridge Scheduler -> Lambda
+# Deploy with: sam build && sam deploy --guided
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  CareCircleSchedulerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handler.lambda_handler
+      Runtime: python3.11
+      Timeout: 30
+      Environment:
+        Variables:
+          SUPABASE_URL: !Ref SupabaseUrl
+          SUPABASE_SERVICE_KEY: !Ref SupabaseServiceKey
+      Events:
+        ScheduledCheck:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: "rate(5 minutes)"
+
+Parameters:
+  SupabaseUrl:
+    Type: String
+  SupabaseServiceKey:
+    Type: String
+    NoEcho: true
