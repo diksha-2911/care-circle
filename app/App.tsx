@@ -1,10 +1,13 @@
 import { NavigationContainer } from '@react-navigation/native';
+import { CareCircleProvider } from './src/contexts/CareCircleContext';
 import RootNavigator from './src/navigation';
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <RootNavigator />
-    </NavigationContainer>
+    <CareCircleProvider>
+      <NavigationContainer>
+        <RootNavigator />
+      </NavigationContainer>
+    </CareCircleProvider>
   );
 }
