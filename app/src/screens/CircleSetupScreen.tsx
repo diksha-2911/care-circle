@@ -27,13 +27,26 @@ export default function CircleSetupScreen() {
 
   const handleJoin = async () => {
     if (!userId || !inviteCode.trim()) return;
+
     setBusy(true);
+
     try {
-      await joinCareCircleWithCode(userId, inviteCode.trim());
+      await joinCareCircleWithCode(
+        userId,
+        inviteCode.trim().toUpperCase()
+      );
+
       await refreshMemberships();
+
+      Alert.alert(
+        'Circle joined',
+        'You have successfully joined the care circle.'
+      );
     } catch (err: any) {
-      // Expected for now — see TODO in services/circle.ts.
-      Alert.alert('Joining isn\u2019t available yet', err.message ?? String(err));
+      Alert.alert(
+        'Could not join circle',
+        err.message ?? String(err)
+      );
     } finally {
       setBusy(false);
     }

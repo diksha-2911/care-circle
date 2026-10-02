@@ -69,6 +69,10 @@ export default function DashboardScreen({ navigation }: any) {
       />
 
       <View style={styles.buttonRow}>
+        <Button title="Invite Members" onPress={() => navigation.navigate('InviteMembers')} />
+      </View>
+      
+      <View style={styles.buttonRow}>
         <Button title="Prescriptions" onPress={() => navigation.navigate('Prescriptions')} />
         <Button title="Appointments" onPress={() => navigation.navigate('Appointments')} />
       </View>

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { CareCircleMembership } from '../types/circle';
+import { CareCircleMembership, MemberRole} from '../types/circle';
 
 /**
  * All circles the given user belongs to, with their role/permissions in
@@ -89,14 +89,34 @@ export async function createCareCircle(
   };
 }
 
-/**
- * TODO: not yet implemented. Redeeming a circle_invitations code
- **/
 export async function joinCareCircleWithCode(
   _userId: string,
-  _code: string
-): Promise<never> {
-  throw new Error(
-    'Joining via invite code requires a server-side Edge Function (not yet built). See TODO in services/circle.ts.'
-  );
+  code: string
+): Promise<{ circle_id: string; role: MemberRole }> {
+  const { data, error } = await supabase.rpc('redeem_circle_invitation', {
+    p_code: code,
+  });
+
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Invite could not be redeemed.');
+
+  return data[0];
 }
+
+export async function createCircleInvitation(
+  circleId: string
+): Promise<string> {
+  const { data, error } = await supabase.rpc(
+    'create_circle_invitation',
+    {
+      p_circle_id: circleId,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+

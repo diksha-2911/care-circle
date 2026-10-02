@@ -7,11 +7,14 @@ import DashboardScreen from '../screens/DashboardScreen';
 import PrescriptionsScreen from '../screens/PrescriptionsScreen';
 import AppointmentsScreen from '../screens/AppointmentsScreen';
 import SOSScreen from '../screens/SOSScreen';
+import InviteMemberScreen from '../screens/InviteMemberScreen';
 
 export type RootStackParamList = {
   Login: undefined;
   CircleSetup: undefined;
   Dashboard: undefined;
+  InviteMembers: undefined;
+  JoinCircle: undefined;
   Prescriptions: undefined;
   Appointments: undefined;
   SOS: undefined;
@@ -59,6 +62,8 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator initialRouteName="Dashboard">
       <Stack.Screen name="Dashboard" component={DashboardScreen} />
+      <Stack.Screen name="InviteMembers" component={InviteMemberScreen} />
+      <Stack.Screen name="JoinCircle" component={CircleSetupScreen} options={{ title: 'Join a Circle' }} />
       <Stack.Screen name="Prescriptions" component={PrescriptionsScreen} />
       <Stack.Screen name="Appointments" component={AppointmentsScreen} />
       <Stack.Screen name="SOS" component={SOSScreen} options={{ presentation: 'modal' }} />
