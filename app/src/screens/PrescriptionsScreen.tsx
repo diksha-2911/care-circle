@@ -1,13 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  FlatList,
-  StyleSheet,
-  Alert,
-} from 'react-native';
+  View, Text, TextInput, Button, FlatList, StyleSheet, Alert} from 'react-native';
+import { scheduleTestNotification, requestNotificationPermissions } from '../services/notifications';
 
 import { supabase } from '../services/supabase';
 import { useCareCircle } from '../contexts/CareCircleContext';
@@ -232,6 +226,23 @@ export default function PrescriptionsScreen() {
     return null;
   }
 
+  const handleTestAlarm = async () => {
+    try {
+      const granted = await requestNotificationPermissions();
+      if (!granted) {
+        Alert.alert('Permission needed', 'Please allow notifications to test this.');
+        return;
+      }
+
+      await scheduleTestNotification();
+
+      Alert.alert('Alarm scheduled', 'You should receive a medicine reminder in 1 minute.');
+    } catch (error: any) {
+      console.error('Notification error:', error);
+      Alert.alert('Notification error', error?.message ?? 'Could not schedule notification.');
+    }
+  };
+
   const frequencyPerDay = Number(frequency) || 0;
 
   return (
@@ -304,6 +315,10 @@ export default function PrescriptionsScreen() {
         disabled={saving}
       />
 
+      <Button
+        title="Test Alarm in 1 Minute"
+        onPress={handleTestAlarm}
+      />
       <Text style={styles.sectionTitle}>
         Your Medicines
       </Text>

@@ -1,0 +1,27 @@
+{
+  "android": {
+    "package": "com.anonymous.carecircleapp"
+  },
+  "ios": {
+    "bundleIdentifier": "com.anonymous.carecircleapp"
+  },
+  "expo": {
+    "plugins": [
+      [
+        "expo-notifications",
+        {}
+      ]
+    ],
+    "android": {
+      "package": "com.anonymous.carecircleapp"
+    },
+    "ios": {
+      "bundleIdentifier": "com.anonymous.carecircleapp"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e940423a-5098-4025-ba04-9a0379bd592a"
+      }
+    }
+  }
+}
