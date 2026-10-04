@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, Button, FlatList, StyleSheet, Alert} from 'react-native';
-import { scheduleTestNotification, requestNotificationPermissions } from '../services/notifications';
+import { scheduleTestNotification, requestNotificationPermissions, scheduleMedicationAlarms } from '../services/notifications';
 
 import { supabase } from '../services/supabase';
 import { useCareCircle } from '../contexts/CareCircleContext';
@@ -180,45 +180,54 @@ export default function PrescriptionsScreen() {
     }
 
     try {
-      setSaving(true);
+        setSaving(true);
 
-      const { error } = await supabase
-        .from('prescriptions')
-        .insert({
-          circle_id: activeCircle.circle_id,
-          drug_name: drugName.trim(),
-          dosage: dosage.trim(),
-          frequency_per_day: frequencyPerDay,
-          alarm_times: normalizedAlarmTimes,
-          quantity_remaining: quantityRemaining,
-        });
+        const granted = await requestNotificationPermissions();
+        if (!granted) {
+          Alert.alert('Permission needed', 'Please allow notifications so medication reminders can work.');
+        }
 
-      if (error) throw error;
+        const { data: inserted, error } = await supabase
+          .from('prescriptions')
+          .insert({
+            circle_id: activeCircle.circle_id,
+            drug_name: drugName.trim(),
+            dosage: dosage.trim(),
+            frequency_per_day: frequencyPerDay,
+            alarm_times: normalizedAlarmTimes,
+            quantity_remaining: quantityRemaining,
+          })
+          .select()
+          .single();
 
-      setDrugName('');
-      setDosage('');
-      setFrequency('');
-      setAlarmTimes([]);
-      setQuantity('');
+        if (error) throw error;
 
-      await loadPrescriptions();
+        // NEW: schedule the actual device alarms, then save their IDs
+        const notificationIds = await scheduleMedicationAlarms(
+          drugName.trim(),
+          dosage.trim(),
+          normalizedAlarmTimes
+        );
 
-      Alert.alert(
-        'Saved',
-        'Prescription added successfully.'
-      );
+        await supabase
+          .from('prescriptions')
+          .update({ notification_ids: notificationIds })
+          .eq('id', inserted.id);
+
+        setDrugName('');
+        setDosage('');
+        setFrequency('');
+        setAlarmTimes([]);
+        setQuantity('');
+
+        await loadPrescriptions();
+
+        Alert.alert('Saved', 'Prescription added successfully.');
     } catch (error: any) {
-      console.error(
-        'Error saving prescription:',
-        error
-      );
-
-      Alert.alert(
-        'Could not save prescription',
-        error?.message ?? 'Something went wrong.'
-      );
+        console.error('Error saving prescription:', error);
+        Alert.alert('Could not save prescription', error?.message ?? 'Something went wrong.');
     } finally {
-      setSaving(false);
+        setSaving(false);
     }
   };
 
