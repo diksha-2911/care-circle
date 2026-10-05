@@ -3,6 +3,7 @@ node_modules/
 .expo/
 dist/
 *.log
+.idea/
 
 # Python
 venv/
@@ -19,3 +20,7 @@ __pycache__/
 
 # OS
 .DS_Store
+
+#Supabase
+.branches/
+.temp/
