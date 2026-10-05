@@ -1,37 +1,93 @@
 # Care Circle
 
-A caregiver coordination app that keeps families on the same page about an aging
-parent's medications, appointments, and wellbeing — with an Alexa+ voice integration
-so the parent can log doses and get reminders hands-free.
+Care Circle is a family healthcare app for managing an aging parent's **medications, appointments, notes, and SOS alerts** in one shared place.
 
-## Why three separate pieces?
+It is designed to integrate with **Alexa+ through MCP**, allowing a patient to access and update their care information conversationally. The Alexa+ experience is **currently simulated through a chat client**.
 
-See [`docs/architecture.md`](docs/architecture.md) for the full breakdown. In short:
+## Architecture
 
-- `app/` — a React Native app for setup, monitoring, and manual logging
-- `mcp-server/` — a Python MCP server that lets Alexa+ talk to the same data
-- `scheduler/` — a background job that fires medication/refill/appointment alerts
-  on a timer, independent of the app or Alexa+ being active
-- `supabase/` — the shared Postgres database all three read/write to
+The project has three main components that share the same Supabase database:
 
-## Prerequisites
+```text
+app/ ────────────────┐
+                     │
+mcp-server/ ─────────┼──→ Supabase
+                     │
+scheduler/ ──────────┘
+```
 
-- Node.js 18+
-- Python 3.11+
-- A free [Supabase](https://supabase.com) project
-- An AWS account (for the MCP server deployment + Lambda scheduler)
-- Expo CLI (`npm install -g expo-cli`)
+* **`app/`** — React Native + Expo mobile app for patients and caregivers
+* **`mcp-server/`** — Python MCP server exposing Care Circle actions to an AI assistant
+* **`scheduler/`** — Background service for medication, refill, and appointment alerts
+* **`supabase/`** — Database migrations and configuration
+
+## Features
+
+* User authentication
+* Care circle creation and caregiver invites
+* Role-based caregiver permissions
+* Medication management and dose logging
+* Local medication reminders
+* Appointment tracking
+* Care notes
+* SOS alerts
+* MCP tools for accessing and updating care data
+* Authenticated MCP requests using Supabase
+
+## MCP Tools
+
+The MCP server currently exposes:
+
+| Tool               | Purpose                       |
+| ------------------ | ----------------------------- |
+| `get_schedule`     | Get medication schedule       |
+| `log_medication`   | Log a medication dose         |
+| `get_refills`      | Check medications running low |
+| `get_appointments` | Get upcoming appointments     |
+| `add_note`         | Add a care note               |
+| `sos`              | Trigger an SOS alert          |
+
+The MCP server gets the authenticated user's identity from their Supabase access token and resolves their Care Circle server-side. The client does not send `user_id` or `circle_id`.
+
+## Tech Stack
+
+* **App:** React Native, Expo, TypeScript
+* **MCP:** Python, FastMCP
+* **Database/Auth:** Supabase, PostgreSQL
+* **AI:** Groq
+* **Infrastructure:** AWS, Docker
+
+## Project Structure
+
+```text
+care-circle/
+│
+├── app/                 # React Native app
+├── mcp-server/          # MCP server
+├── scheduler/           # Background scheduler
+├── supabase/            # Database migrations
+│
+└── docs/
+    ├── architecture.md
+    └── demo-script.md
+```
 
 ## Setup
+
+### Requirements
+
+* Node.js 18+
+* Python 3.11+
+* Supabase
+* Expo
+* AWS for deployment
 
 ### 1. Database
 
 ```bash
 cd supabase
-# create a Supabase project at supabase.com, then link it:
 npx supabase link --project-ref <your-project-ref>
-npx supabase db push   # applies migrations/
-psql <connection-string> -f seed.sql   # optional demo data
+npx supabase db push
 ```
 
 ### 2. App
@@ -39,20 +95,27 @@ psql <connection-string> -f seed.sql   # optional demo data
 ```bash
 cd app
 npm install
-cp .env.example .env   # fill in your Supabase URL + anon key
+cp .env.example .env
 npx expo start
 ```
+
+Add the Supabase URL and anon key to `.env`.
 
 ### 3. MCP Server
 
 ```bash
 cd mcp-server
-python -m venv venv && source venv/bin/activate
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # fill in Supabase service key
-python src/server.py   # runs locally on port 8000
-# expose locally with: cloudflared tunnel --url http://localhost:8000
-# register with Alexa+ via: alexa-ai deploy
+```
+
+Add the required Supabase credentials to `.env`.
+
+Run locally with:
+
+```bash
+python src/server.py
 ```
 
 ### 4. Scheduler
@@ -60,14 +123,31 @@ python src/server.py   # runs locally on port 8000
 ```bash
 cd scheduler
 pip install -r requirements.txt
-# deploy with AWS SAM:
-sam build && sam deploy --guided
+sam build
+sam deploy --guided
 ```
 
-## Project status
+## Status
 
-Hackathon MVP — see `docs/demo-script.md` for what's demoed vs. what's stubbed.
+**Hackathon MVP**
 
-## License
+### Completed
 
-MIT — see [LICENSE](LICENSE).
+* Core mobile app
+* Authentication and care circles
+* Caregiver invites and permissions
+* Medication management and local reminders
+* Appointments, notes, and SOS
+* Self-hosted MCP server
+* Supabase authentication for MCP
+* Six working MCP tools
+* Chat-based Alexa+ simulation
+
+### Remaining
+
+* Deploy MCP server
+* Complete and deploy background scheduler
+* Caregiver push notifications
+* Final end-to-end deployment testing
+
+See [`docs/architecture.md`](https://github.com/tanuushree/care-circle/blob/main/docs/architecture.md) for more details.
