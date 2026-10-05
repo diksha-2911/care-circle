@@ -24,3 +24,10 @@ __pycache__/
 #Supabase
 .branches/
 .temp/
+
+#Firebase
+google-services.json
+
+#Prebuits
+android/
+ios/

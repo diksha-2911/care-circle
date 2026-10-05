@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
 import { supabase } from '../services/supabase';
+import { registerForPushNotifications } from '../services/notifications';
+import { saveDeviceToken } from '../services/deviceTokens';
 
 export default function LoginScreen() {
   const [isSignup, setIsSignup] = useState(false);
@@ -51,13 +53,29 @@ export default function LoginScreen() {
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
     });
 
     if (error) {
       setError(error.message);
+      return;
+    }
+
+    const user = data.user;
+
+    if (user) {
+      try {
+        const token = await registerForPushNotifications(user.id);
+
+        if (token) {
+          await saveDeviceToken(user.id, token);
+          console.log('Device token registered successfully');
+        }
+      } catch (tokenError) {
+        console.error('Failed to register device token:', tokenError);
+      }
     }
   };
 
