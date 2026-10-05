@@ -3,16 +3,12 @@
 upcoming appointments, then dispatches notifications for each.
 """
 import os
-from dotenv import load_dotenv
 from supabase import create_client
 
 from check_due_doses import check_due_doses
 from check_refills import check_refills
 from check_appointments import check_appointments
 from notify import send_push
-
-load_dotenv()
-
 
 def _get_db():
     return create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])

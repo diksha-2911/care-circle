@@ -14,6 +14,7 @@ __pycache__/
 # Env
 .env
 .env.local
+env.json
 
 # AWS SAM
 .aws-sam/
@@ -31,3 +32,6 @@ google-services.json
 #Prebuits
 android/
 ios/
+
+#AWS
+.aws-sam/
