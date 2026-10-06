@@ -28,6 +28,7 @@ env.json
 
 #Firebase
 google-services.json
+firebase-admin.json
 
 #Prebuits
 android/

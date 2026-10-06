@@ -35,35 +35,63 @@ def _send_alerts(db, alerts):
 
     for alert in alerts:
         circle_id = alert.get("circle_id")
+        alert_type = alert.get("type")
 
-        if not circle_id:
+        if not circle_id or not alert_type:
+            continue
+
+        # Use the underlying event ID as the unique reference.
+        if alert_type == "missed_dose":
+            reference_id = alert["dose_log_id"]
+
+        elif alert_type == "refill_needed":
+            reference_id = alert["prescription_id"]
+
+        elif alert_type == "appointment_reminder":
+            reference_id = alert["id"]
+
+        else:
+            continue
+
+        # Check whether this alert was already sent.
+        existing = (
+            db.table("notification_logs")
+            .select("id")
+            .eq("alert_type", alert_type)
+            .eq("reference_id", reference_id)
+            .limit(1)
+            .execute()
+        )
+
+        if existing.data:
+            print(
+                f"Skipping duplicate alert: "
+                f"{alert_type} / {reference_id}"
+            )
             continue
 
         tokens = _get_caregiver_tokens(db, circle_id)
 
-        if alert["type"] == "missed_dose":
+        if alert_type == "missed_dose":
             title = "💊 Missed Medication"
             body = (
                 f"{alert['drug_name']} {alert['dosage']} "
                 "was not taken on time."
             )
 
-        elif alert["type"] == "refill_needed":
+        elif alert_type == "refill_needed":
             title = "💊 Refill Needed"
             body = (
                 f"{alert['drug_name']} is running low "
                 f"({alert['quantity_remaining']} remaining)."
             )
 
-        elif alert["type"] == "appointment_reminder":
+        elif alert_type == "appointment_reminder":
             title = "📅 Appointment Reminder"
             body = (
                 f"Appointment with {alert['doctor_name']} "
-                f"is coming up."
+                "is coming up."
             )
-
-        else:
-            continue
 
         for token in tokens:
             try:
@@ -71,6 +99,14 @@ def _send_alerts(db, alerts):
                 sent += 1
             except Exception as error:
                 print(f"Failed to send push notification: {error}")
+
+        # Record the alert only after attempting delivery.
+        if tokens:
+            db.table("notification_logs").insert({
+                "circle_id": circle_id,
+                "alert_type": alert_type,
+                "reference_id": reference_id,
+            }).execute()
 
     return sent
 
