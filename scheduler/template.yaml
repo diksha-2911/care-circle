@@ -16,6 +16,7 @@ Resources:
         Variables:
           SUPABASE_URL: !Ref SupabaseUrl
           SUPABASE_SERVICE_KEY: !Ref SupabaseServiceKey
+          FCM_CREDENTIALS_PATH: /var/task/firebase-admin.json
       Events:
         ScheduledCheck:
           Type: ScheduleV2
