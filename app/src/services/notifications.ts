@@ -82,3 +82,36 @@ export async function cancelMedicationAlarms(ids: string[]): Promise<void> {
     await Notifications.cancelScheduledNotificationAsync(id);
   }
 }
+
+export async function registerForPushNotifications(userId: string) {
+  if (isExpoGo) {
+    console.warn(
+      'Skipping push token registration in Expo Go. ' +
+      'Use the Android development build.'
+    );
+    return null;
+  }
+
+  const { status: existingStatus } =
+    await Notifications.getPermissionsAsync();
+
+  let finalStatus = existingStatus;
+
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+
+  if (finalStatus !== 'granted') {
+    console.warn('Notification permission was not granted.');
+    return null;
+  }
+
+  await ensureNotificationChannel();
+
+  const deviceToken = await Notifications.getDevicePushTokenAsync();
+
+  console.log('📱 Android device token:', deviceToken.data);
+
+  return deviceToken.data;
+}

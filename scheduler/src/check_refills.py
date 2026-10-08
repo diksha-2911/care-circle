@@ -12,6 +12,7 @@ def check_refills(db) -> list[dict]:
             alerts.append({
                 "type": "refill_needed",
                 "circle_id": p["circle_id"],
+                "prescription_id": p["id"],
                 "drug_name": p["drug_name"],
                 "quantity_remaining": p["quantity_remaining"],
             })
