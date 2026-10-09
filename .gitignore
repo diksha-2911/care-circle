@@ -12,6 +12,7 @@ __pycache__/
 .pytest_cache/
 
 # Env
+.env.*
 .env
 .env.local
 env.json
@@ -28,6 +29,7 @@ env.json
 
 #Firebase
 google-services.json
+firebase-admin.json
 
 #Prebuits
 android/
