@@ -3,7 +3,6 @@ import { Session } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase';
 import { getMyCircleMemberships } from '../services/circle';
 import { CareCircleMembership } from '../types/circle';
-import { registerDeviceTokenForUser } from '../services/deviceTokens';
 
 interface CareCircleContextValue {
   loading: boolean;
@@ -26,6 +25,8 @@ export function CareCircleProvider({ children }: { children: ReactNode }) {
   const loadMemberships = async (userId: string) => {
     const rows = await getMyCircleMemberships(userId);
     setMemberships(rows);
+    // Default to the first circle if none is selected yet, or if the
+    // previously-active one is no longer in the list (e.g. removed).
     setActiveCircleIdState((prev) => {
       if (prev && rows.some((r) => r.circle_id === prev)) return prev;
       return rows[0]?.circle_id ?? null;
@@ -33,73 +34,50 @@ export function CareCircleProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (!mounted) return;
-      if (error) console.error('Failed to restore auth session:', error.message);
+    // Initial session check on app launch.
+    supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session?.user.id) {
-        loadMemberships(data.session.user.id)
-          .catch((loadError) => console.error('Failed to load care circles:', loadError))
-          .finally(() => { if (mounted) setLoading(false); });
+        loadMemberships(data.session.user.id).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
-    }).catch((error) => {
-      console.error('Failed to restore auth session:', error);
-      if (mounted) setLoading(false);
     });
 
+    // Keep session (and memberships) in sync across login/logout, and
+    // across devices sharing the same account.
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      if (!mounted) return;
       setSession(newSession);
       if (newSession?.user.id) {
         setLoading(true);
-        loadMemberships(newSession.user.id)
-          .catch((error) => console.error('Failed to load care circles:', error))
-          .finally(() => { if (mounted) setLoading(false); });
+        loadMemberships(newSession.user.id).finally(() => setLoading(false));
       } else {
         setMemberships([]);
         setActiveCircleIdState(null);
-        setLoading(false);
       }
     });
 
-    return () => {
-      mounted = false;
-      authListener.subscription.unsubscribe();
-    };
+    return () => authListener.subscription.unsubscribe();
   }, []);
-
-  // Also register on restored sessions, not just the initial login screen.
-  // The upsert is idempotent, so auth refreshes won't create duplicate rows.
-  useEffect(() => {
-    const currentUserId = session?.user.id;
-    if (!currentUserId) return;
-    let cancelled = false;
-    registerDeviceTokenForUser(currentUserId).then((row) => {
-      if (!cancelled && row) console.info('Device push registration is up to date.');
-    }).catch((error) => {
-      if (!cancelled) console.warn('Device push registration could not complete:', error?.message ?? error);
-    });
-    return () => { cancelled = true; };
-  }, [session?.user.id]);
 
   const refreshMemberships = async () => {
     if (session?.user.id) await loadMemberships(session.user.id);
   };
+
   const activeCircle = memberships.find((m) => m.circle_id === activeCircleId) ?? null;
 
   return (
-    <CareCircleContext.Provider value={{
-      loading,
-      session,
-      userId: session?.user.id ?? null,
-      memberships,
-      activeCircle,
-      setActiveCircleId: setActiveCircleIdState,
-      refreshMemberships,
-    }}>
+    <CareCircleContext.Provider
+      value={{
+        loading,
+        session,
+        userId: session?.user.id ?? null,
+        memberships,
+        activeCircle,
+        setActiveCircleId: setActiveCircleIdState,
+        refreshMemberships,
+      }}
+    >
       {children}
     </CareCircleContext.Provider>
   );

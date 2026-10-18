@@ -15,25 +15,9 @@ Notifications.setNotificationHandler({
 });
 
 export default function App() {
-  useEffect(() => {
-    ensureNotificationChannel().catch((error) => {
-      console.warn('Could not configure notification channel:', error);
-    });
-
-    const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
-      // Backend data includes IDs only. A future navigation/deep-link layer can
-      // use these identifiers to open the related dose, prescription or circle.
-      const data = response.notification.request.content.data;
-      console.info('Care Circle notification opened.', {
-        alertType: data.alertType,
-        referenceId: data.referenceId,
-        circleId: data.circleId,
-      });
-    });
-
-    return () => responseListener.remove();
-  }, []);
-
+    useEffect(() => {
+      ensureNotificationChannel();
+    }, []);
   return (
     <CareCircleProvider>
       <NavigationContainer>

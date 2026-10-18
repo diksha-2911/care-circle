@@ -12,7 +12,7 @@ from supabase import create_client
 from check_due_doses import check_due_doses
 from check_refills import check_refills
 from check_appointments import check_appointments
-from notify import is_invalid_device_token, send_push
+from notify import send_push
 
 CLAIM_TTL = timedelta(minutes=10)
 
@@ -214,27 +214,12 @@ def _send_alerts(db, alerts):
             delivery_errors = []
             for token in tokens:
                 try:
-                    send_push(
-                        token,
-                        title,
-                        body,
-                        data={
-                            "alertType": str(alert_type),
-                            "referenceId": str(reference_id),
-                            "circleId": str(circle_id),
-                        },
-                    )
+                    send_push(token, title, body)
                     sent += 1
                     successful_deliveries += 1
                 except Exception as error:
                     delivery_errors.append(str(error))
                     print(f"Failed to send push notification: {error}")
-                    if is_invalid_device_token(error):
-                        try:
-                            db.table("device_tokens").delete().eq("token", token).execute()
-                            print("Removed an invalid device token.")
-                        except Exception as cleanup_error:
-                            print(f"Could not remove invalid device token: {cleanup_error}")
 
             if successful_deliveries:
                 # Event-level logging: at least one caregiver device received
@@ -265,7 +250,6 @@ def _get_caregiver_tokens(db, circle_id: str) -> list[str]:
         .select("user_id")
         .eq("circle_id", circle_id)
         .eq("role", "caregiver")
-        .eq("can_view_health_data", True)
         .execute()
     )
 
