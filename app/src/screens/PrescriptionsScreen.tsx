@@ -224,16 +224,16 @@ export default function PrescriptionsScreen() {
       if (error) throw error;
 
       // NEW: schedule the actual device alarms, then save their IDs
-      const notificationIds = await scheduleMedicationAlarms(
-        drugName.trim(),
-        dosage.trim(),
-        normalizedAlarmTimes
-      );
+      // const notificationIds = await scheduleMedicationAlarms(
+      //   drugName.trim(),
+      //   dosage.trim(),
+      //   normalizedAlarmTimes
+      // );
 
-      await supabase
-        .from('prescriptions')
-        .update({ notification_ids: notificationIds })
-        .eq('id', inserted.id);
+      // await supabase
+      //   .from('prescriptions')
+      //   .update({ notification_ids: notificationIds })
+      //   .eq('id', inserted.id);
 
       setDrugName('');
       setDosage('');
