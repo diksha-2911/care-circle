@@ -256,15 +256,6 @@ export default function PrescriptionsScreen() {
     try {
       setSaving(true);
 
-      const granted = await requestNotificationPermissions();
-
-      if (!granted) {
-        Alert.alert(
-          'Permission needed',
-          'Please allow notifications so medication reminders can work.'
-        );
-      }
-
       const { data: inserted, error } = await supabase
         .from('prescriptions')
         .insert({
@@ -280,17 +271,26 @@ export default function PrescriptionsScreen() {
 
       if (error) throw error;
 
-      // NEW: schedule the actual device alarms, then save their IDs
-      // const notificationIds = await scheduleMedicationAlarms(
-      //   drugName.trim(),
-      //   dosage.trim(),
-      //   normalizedAlarmTimes
-      // );
+      // Asks for permission itself; returns [] if denied or nothing could be scheduled
+      const notificationIds = await scheduleMedicationAlarms(
+        drugName.trim(),
+        dosage.trim(),
+        normalizedAlarmTimes
+      );
 
-      // await supabase
-      //   .from('prescriptions')
-      //   .update({ notification_ids: notificationIds })
-      //   .eq('id', inserted.id);
+      let idsSaved = true;
+
+      if (notificationIds.length > 0) {
+        const { error: updateError } = await supabase
+          .from('prescriptions')
+          .update({ notification_ids: notificationIds })
+          .eq('id', inserted.id);
+
+        if (updateError) {
+          idsSaved = false;
+          console.error('Could not save notification IDs:', updateError);
+        }
+      }
 
       setDrugName('');
       setDosage('');
@@ -300,7 +300,19 @@ export default function PrescriptionsScreen() {
 
       await loadPrescriptions();
 
-      Alert.alert('Saved', 'Prescription added successfully.');
+      if (notificationIds.length === 0) {
+        Alert.alert(
+          'Saved, but reminders are off',
+          'The medicine was saved, but no alarms were scheduled. Allow notifications for this app in system settings, then re-add it.'
+        );
+      } else if (!idsSaved) {
+        Alert.alert(
+          'Saved with a warning',
+          'Reminders are set, but they could not be linked to this medicine, so they cannot be cancelled later. Check that the notification_ids column exists.'
+        );
+      } else {
+        Alert.alert('Saved', 'Prescription added and reminders scheduled.');
+      }
     } catch (error: any) {
       console.error('Error saving prescription:', error);
       Alert.alert(
@@ -318,17 +330,15 @@ export default function PrescriptionsScreen() {
 
   const handleTestAlarm = async () => {
     try {
-      const granted = await requestNotificationPermissions();
+      const id = await scheduleTestNotification();
 
-      if (!granted) {
+      if (!id) {
         Alert.alert(
-          'Permission needed',
-          'Please allow notifications to test this.'
+          'Not scheduled',
+          'Notifications are blocked or unavailable. Check notification permission for this app.'
         );
         return;
       }
-
-      await scheduleTestNotification();
 
       Alert.alert(
         'Alarm scheduled',
