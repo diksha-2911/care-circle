@@ -1,7 +1,7 @@
 # AWS SAM template: EventBridge Scheduler -> Lambda
 # Deploy with: sam build && sam deploy --guided
 
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 
 Resources:
@@ -23,9 +23,61 @@ Resources:
           Properties:
             ScheduleExpression: "rate(5 minutes)"
 
+  SosApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: sos_handler.lambda_handler
+      Runtime: python3.11
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          SUPABASE_URL: !Ref SupabaseUrl
+          SUPABASE_SERVICE_KEY: !Ref SupabaseServiceKey
+          FCM_CREDENTIALS_PATH: /var/task/firebase-admin.json
+          SOS_ALLOWED_ORIGIN: !Ref SosAllowedOrigin
+          SOS_SMS_ENABLED: !Ref SosSmsEnabled
+          SOS_SNS_REGION: !Ref AWS::Region
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: sns:Publish
+              Resource: "*"
+      Events:
+        SosCollection:
+          Type: Api
+          Properties:
+            Path: /sos
+            Method: POST
+        SosEvent:
+          Type: Api
+          Properties:
+            Path: /sos/{eventId}
+            Method: GET
+        SosAcknowledge:
+          Type: Api
+          Properties:
+            Path: /sos/{eventId}/acknowledge
+            Method: POST
+
 Parameters:
   SupabaseUrl:
     Type: String
   SupabaseServiceKey:
     Type: String
     NoEcho: true
+  SosAllowedOrigin:
+    Type: String
+    Default: "*"
+    Description: Set this to the exact allowed app/web origin where applicable.
+  SosSmsEnabled:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: Enable only after configuring and testing Amazon SNS SMS for your account/region.
+
+Outputs:
+  SosApiUrl:
+    Description: Base URL for the SOS HTTP API
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com"
