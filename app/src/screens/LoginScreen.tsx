@@ -63,6 +63,8 @@ export default function LoginScreen() {
       return;
     }
 
+    console.log('Supabase access token:', data.session?.access_token);
+    
     const user = data.user;
 
     if (user) {

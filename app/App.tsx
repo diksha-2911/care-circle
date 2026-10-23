@@ -3,7 +3,7 @@ import { CareCircleProvider } from './src/contexts/CareCircleContext';
 import RootNavigator from './src/navigation';
 import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
-import { ensureNotificationChannel } from './src/services/notifications';
+import { initNotifications } from './src/services/notifications';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -15,9 +15,12 @@ Notifications.setNotificationHandler({
 });
 
 export default function App() {
-    useEffect(() => {
-      ensureNotificationChannel();
-    }, []);
+  useEffect(() => {
+    initNotifications().catch((e) =>
+      console.warn('Notification init failed:', e)
+    );
+  }, []);
+
   return (
     <CareCircleProvider>
       <NavigationContainer>

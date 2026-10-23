@@ -4,7 +4,8 @@
       [
         "expo-notifications",
         {}
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "android": {
       "package": "com.anonymous.carecircleapp",
