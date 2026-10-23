@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import { View, Text, TextInput, FlatList, StyleSheet, Alert, Pressable, KeyboardAvoidingView, Platform,} from 'react-native';
 
 import {
@@ -9,6 +10,7 @@ import {
 
 import { supabase } from '../services/supabase';
 import { useCareCircle } from '../contexts/CareCircleContext';
+import { extractPrescriptionText } from '../services/prescriptionOcr';
 
 interface Prescription {
   id: string;
@@ -44,6 +46,61 @@ export default function PrescriptionsScreen() {
   const [quantity, setQuantity] = useState('');
 
   const [saving, setSaving] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [ocrText, setOcrText] = useState('');
+  const [ocrWarnings, setOcrWarnings] = useState<string[]>([]);
+
+  const handleScanPrescription = async () => {
+    if (!activeCircle) return;
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Photo permission needed', 'Allow photo access to scan a prescription.');
+        return;
+      }
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+        base64: true,
+      });
+      if (pickerResult.canceled) return;
+      const image = pickerResult.assets?.[0];
+      if (!image?.base64) {
+        Alert.alert('Could not read image', 'Please select another image and try again.');
+        return;
+      }
+
+      setScanning(true);
+      const result = await extractPrescriptionText({
+        circleId: activeCircle.circle_id,
+        base64: image.base64,
+        mimeType: image.mimeType,
+        fileName: image.fileName,
+      });
+      setOcrText(result.extractedText);
+      setOcrWarnings(result.warnings);
+      // Only populate fields for which the backend found a clear textual match.
+      // Drug name and alarm times remain manual-review fields.
+      if (result.suggestions.drug_name) setDrugName(result.suggestions.drug_name);
+      if (result.suggestions.dosage) setDosage(result.suggestions.dosage);
+      if (result.suggestions.frequency_per_day != null) {
+        setFrequency(String(result.suggestions.frequency_per_day));
+      }
+      if (result.suggestions.quantity_remaining != null) {
+        setQuantity(String(result.suggestions.quantity_remaining));
+      }
+      Alert.alert(
+        'Scan complete — review required',
+        'Check the extracted text and verify every field. Enter the medicine name and alarm times manually if they are not filled in.',
+      );
+    } catch (error: any) {
+      console.error('Prescription OCR failed:', error?.message ?? 'Unknown error');
+      Alert.alert('Could not scan prescription', error?.message ?? 'Please try again.');
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const loadPrescriptions = async () => {
     if (!activeCircle) return;
@@ -315,6 +372,27 @@ export default function PrescriptionsScreen() {
                 Add Medicine
               </Text>
 
+              <Pressable
+                style={[styles.primaryButton, scanning && styles.disabledButton]}
+                onPress={handleScanPrescription}
+                disabled={scanning || saving}
+                accessibilityRole="button"
+              >
+                <Text style={styles.primaryButtonText}>
+                  {scanning ? 'Scanning prescription...' : 'Scan Prescription (OCR)'}
+                </Text>
+              </Pressable>
+
+              {!!ocrText && (
+                <View style={styles.ocrResultCard}>
+                  <Text style={styles.label}>Extracted text — verify against the original</Text>
+                  <Text style={styles.ocrText}>{ocrText}</Text>
+                  {ocrWarnings.map((warning, index) => (
+                    <Text key={`${index}-${warning}`} style={styles.ocrWarning}>• {warning}</Text>
+                  ))}
+                </View>
+              )}
+
               <Text style={styles.label}>Medicine name</Text>
 
               <TextInput
@@ -562,6 +640,28 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+
+  ocrResultCard: {
+    backgroundColor: COLORS.softBlue,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  ocrText: {
+    color: COLORS.text,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 6,
+  },
+  ocrWarning: {
+    color: COLORS.danger,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 6,
   },
 
   sectionTitle: {
