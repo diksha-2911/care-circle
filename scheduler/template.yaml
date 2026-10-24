@@ -61,31 +61,27 @@ Resources:
             Path: /sos/{eventId}/acknowledge
             Method: POST
 
-  PrescriptionOcrFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/
-      Handler: prescription_ocr_handler.lambda_handler
-      Runtime: python3.11
-      Timeout: 30
-      MemorySize: 512
-      Environment:
-        Variables:
-          SUPABASE_URL: !Ref SupabaseUrl
-          SUPABASE_SERVICE_KEY: !Ref SupabaseServiceKey
-          OCR_ALLOWED_ORIGIN: "*"
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - textract:DetectDocumentText
-              Resource: "*"
-      Events:
-        PrescriptionOcrApi:
-          Type: Api
-          Properties:
-            Path: /prescriptions/ocr
-            Method: POST
+    PrescriptionOcrFunction:
+      Type: AWS::Serverless::Function
+      Metadata:
+        Dockerfile: Dockerfile.ocr
+        DockerContext: ./src
+        DockerTag: prescription-ocr-python311
+      Properties:
+        PackageType: Image
+        Timeout: 30
+        MemorySize: 1024
+        Environment:
+          Variables:
+            SUPABASE_URL: !Ref SupabaseUrl
+            SUPABASE_SERVICE_KEY: !Ref SupabaseServiceKey
+            OCR_ALLOWED_ORIGIN: "*"
+        Events:
+          PrescriptionOcrApi:
+            Type: Api
+            Properties:
+              Path: /prescriptions/ocr
+              Method: POST
 
 Parameters:
   SupabaseUrl:
@@ -106,8 +102,8 @@ Parameters:
 Outputs:
   SosApiUrl:
     Description: Base URL for the SOS HTTP API
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
 
   PrescriptionOcrApiUrl:
     Description: URL for the Prescription OCR API
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/prescriptions/ocr"

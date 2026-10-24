@@ -118,6 +118,8 @@ async def main():
                 tool_choice="auto",
             )
 
+            print(f"\n🔧 Response from Groq: {response}")
+
             assistant_message = response.choices[0].message
 
             # Save the assistant's decision
@@ -164,6 +166,7 @@ async def main():
                 final_response = groq.chat.completions.create(
                     model="openai/gpt-oss-20b",
                     messages=messages,
+                    tool_choice="none"
                 )
 
                 answer = final_response.choices[0].message.content

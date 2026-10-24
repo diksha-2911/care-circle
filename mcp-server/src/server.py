@@ -19,7 +19,10 @@ from tools.get_refill_status import get_refill_status
 from tools.add_care_note import add_care_note
 from tools.trigger_sos import trigger_sos
 
-from circle_auth.auth_context import get_authenticated_user_id
+from circle_auth.auth_context import (
+    get_authenticated_access_token,
+    get_authenticated_user_id,
+)
 from circle_auth.circle_context import get_user_circle_id
 
 load_dotenv()
@@ -90,11 +93,13 @@ def add_note(note: str) -> dict:
 def sos() -> dict:
     """Trigger an SOS for the authenticated user's care circle."""
 
-    user_id, circle_id = get_authenticated_circle()
+    user_id = get_authenticated_user_id()
+    circle_id = get_user_circle_id(user_id)
+    access_token = get_authenticated_access_token()
 
     return trigger_sos(
-        circle_id,
-        user_id,
+        circle_id=circle_id,
+        access_token=access_token,
     )
 
 if __name__ == "__main__":

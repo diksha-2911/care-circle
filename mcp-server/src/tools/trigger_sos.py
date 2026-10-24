@@ -1,30 +1,57 @@
-"""MCP SOS tool: call the same authenticated SOS API used by the mobile app."""
+"""Trigger Care Circle SOS through the deployed SOS API."""
+
 import os
+import uuid
+
 import requests
 
 
-def trigger_sos(circle_id: str, triggered_by_user_id: str) -> dict:
-    """Trigger SOS through the shared API.
+def trigger_sos(circle_id: str, access_token: str) -> dict:
+    """Trigger SOS for a care circle using the authenticated user's token."""
 
-    Configure SOS_API_URL and SOS_INTERNAL_TOKEN. The backend must validate this
-    internal token separately from user bearer tokens and verify that the
-    supplied user is authorized in the supplied circle. Do not expose this token
-    to the mobile app or commit it to source control.
-    """
-    base_url = os.environ.get('SOS_API_URL', '').rstrip('/')
-    internal_token = os.environ.get('SOS_INTERNAL_TOKEN', '')
-    if not base_url or not internal_token:
-        raise RuntimeError('SOS_API_URL and SOS_INTERNAL_TOKEN must be configured for MCP SOS.')
-    response = requests.post(
-        f'{base_url}/internal/sos',
-        headers={'Authorization': f'Bearer {internal_token}', 'Content-Type': 'application/json'},
-        json={'circleId': circle_id, 'triggeredByUserId': triggered_by_user_id},
-        timeout=20,
-    )
+    sos_api_url = os.environ.get("SOS_API_URL", "").strip()
+
+    if not sos_api_url:
+        raise RuntimeError(
+            "SOS_API_URL must contain the deployed SOS API endpoint."
+        )
+
+    if not access_token:
+        raise RuntimeError("Authenticated user's access token is required.")
+
+    if not circle_id:
+        raise RuntimeError("A valid circle ID is required.")
+
+    # Use the same key in the request header and body.
+    idempotency_key = str(uuid.uuid4())
+
+    try:
+        response = requests.post(
+            sos_api_url,
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+                "Idempotency-Key": idempotency_key,
+            },
+            json={
+                "circleId": circle_id,
+                "idempotencyKey": idempotency_key,
+            },
+            timeout=20,
+        )
+    except requests.RequestException as exc:
+        raise RuntimeError(
+            f"Could not reach the SOS API: {exc}"
+        ) from exc
+
     try:
         payload = response.json()
     except ValueError:
-        payload = {}
+        payload = {"message": response.text}
+
     if not response.ok:
-        raise RuntimeError(payload.get('error') or f'SOS API failed with HTTP {response.status_code}.')
+        raise RuntimeError(
+            f"SOS API returned HTTP {response.status_code}: {payload}"
+        )
+
     return payload
